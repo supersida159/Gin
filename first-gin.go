@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"net/http"
 
+	"gin-framework/src/auth"
+	"gin-framework/src/db"
+
 	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
+	"golang.org/x/crypto/bcrypt"
 )
 
-var Usersinfor, err = connectSQL()
+var Usersinfor, err = db.GetDB()
 
 func main() {
 	r := setupRouter()
@@ -23,6 +26,18 @@ func setupRouter() *gin.Engine {
 	r.GET("/one", getting)
 	r.GET("/two/:name", getName)
 	r.POST("/login", postLogin)
+	r.GET("/admin", Printoken)
+	r.POST("/Register", func(c *gin.Context) {
+		userRegister := auth.UserRegister{}
+		userRegister.Register(c, Usersinfor)
+	})
+	PrivateInfo := r.Group("/Private")
+	PrivateInfo.Use(auth.AuthLogin)
+	{
+		PrivateInfo.GET("/Friend")
+		PrivateInfo.GET("/history")
+	}
+	r.GET("/Refresh", auth.Refreshtoken)
 	return r
 }
 
@@ -41,15 +56,22 @@ func postLogin(c *gin.Context) {
 	password := c.PostForm("password")
 	fmt.Println("Usersinfor: ", Usersinfor)
 	for _, user := range Usersinfor {
-
 		if user.Username == username {
 			fmt.Println("Password:", user.Password)
-			if user.Password == password {
-				c.JSON(http.StatusOK, gin.H{"token": "this is a token"})
+			if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) == nil {
+				token, err := auth.GenerateToken(string(user.ID))
+				refreshToken, _ := auth.GenerateRefreshToken(user.ID)
+				if err == nil {
+					c.JSON(http.StatusOK, gin.H{"Token": token, "refreshtoken": refreshToken})
+				}
 				return
 			}
 		}
 	}
-	c.JSON(http.StatusInternalServerError, gin.H{"token": "wrong pass word or username"})
+	c.JSON(http.StatusInternalServerError, gin.H{"token": err})
 	return
+}
+
+func Printoken(c *gin.Context) {
+	c.JSON(http.StatusOK, auth.Store.GetAllTokens())
 }

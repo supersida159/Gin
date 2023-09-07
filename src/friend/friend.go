@@ -14,6 +14,7 @@ var SearchingFriendResult map[string]string
 func SeachingFriend(c *gin.Context) {
 	searching := c.PostForm("searchingUD")
 	_, err := strconv.Atoi(searching) //check input is num or username
+	println("asdfasdf")
 	if err == nil {
 		for _, user := range db.Usersinfor {
 			if strings.Contains(user.Phonenumber, searching) {

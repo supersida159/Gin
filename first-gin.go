@@ -6,12 +6,11 @@ import (
 
 	"gin-framework/src/auth"
 	"gin-framework/src/db"
+	"gin-framework/src/friend"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var Usersinfor, err = db.GetDB()
 
 func main() {
 	r := setupRouter()
@@ -29,7 +28,7 @@ func setupRouter() *gin.Engine {
 	r.GET("/admin", Printoken)
 	r.POST("/Register", func(c *gin.Context) {
 		userRegister := auth.UserRegister{}
-		userRegister.Register(c, Usersinfor)
+		userRegister.Register(c, db.Usersinfor)
 	})
 	PrivateInfo := r.Group("/Private")
 	PrivateInfo.Use(auth.AuthLogin)
@@ -37,6 +36,10 @@ func setupRouter() *gin.Engine {
 		PrivateInfo.GET("/Friend")
 		PrivateInfo.GET("/history")
 	}
+	//friend...
+	//seaching friend
+	r.POST("/SeachFriend", friend.SeachingFriend)
+	// verify refreshtoken
 	r.GET("/Refresh", auth.Refreshtoken)
 	return r
 }
@@ -54,8 +57,8 @@ func getName(c *gin.Context) {
 func postLogin(c *gin.Context) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
-	fmt.Println("Usersinfor: ", Usersinfor)
-	for _, user := range Usersinfor {
+	fmt.Println("Usersinfor: ", db.Usersinfor)
+	for _, user := range db.Usersinfor {
 		if user.Username == username {
 			fmt.Println("Password:", user.Password)
 			if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) == nil {
@@ -68,7 +71,7 @@ func postLogin(c *gin.Context) {
 			}
 		}
 	}
-	c.JSON(http.StatusInternalServerError, gin.H{"token": err})
+	c.JSON(http.StatusInternalServerError, gin.H{"token": db.Err})
 	return
 }
 

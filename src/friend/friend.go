@@ -1,6 +1,7 @@
 package friend
 
 import (
+	"fmt"
 	"gin-framework/src/db"
 	"net/http"
 	"strconv"
@@ -14,9 +15,13 @@ var SearchingFriendResult map[string]string
 func SeachingFriend(c *gin.Context) {
 	searching := c.PostForm("searchingUD")
 	_, err := strconv.Atoi(searching) //check input is num or username
-	println("asdfasdf")
+
 	if err == nil {
+		fmt.Println("length:", len(db.Usersinfor))
 		for _, user := range db.Usersinfor {
+			fmt.Println("user.Phonenumber:", user.Phonenumber)
+			fmt.Println("searching:", searching)
+			fmt.Println("db.Usersinfor:", db.Usersinfor)
 			if strings.Contains(user.Phonenumber, searching) {
 				SearchingFriendResult[user.Username] = user.Phonenumber
 			}

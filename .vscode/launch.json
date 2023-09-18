@@ -5,11 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug mycode",
+            "name": "Launch",
             "type": "go",
-            "request": "attach",
-            "mode": "local",
-            "processId": "${workspaceFolder}"
+            "request": "launch",
+            "mode": "debug",
+            "program": "${fileDirname}",
+            "args": []
         }
+
     ]
 }

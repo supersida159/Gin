@@ -12,45 +12,50 @@ import (
 var jwtKey = []byte("Golang-language")
 
 type CustomClaims struct {
-	UserID string `json:"user_id"`
+	UserID int `json:"user_id"`
 	jwt.StandardClaims
 }
 
 var Store = NewTokenStore()
 
-func GenerateToken(userID string) (string, error) {
+func GenerateToken(userID int) (string, string, error) {
 
-	expirationTime := time.Now().Add(30 * time.Second) // Access token expiration time
-	claims := &CustomClaims{
+	accessExpirationTime := time.Now().Add(10 * time.Minute) // Access token expiration time
+	refreshExpirationTime := time.Now().Add(10 * time.Hour)  // Refresh token expiration time
+
+	// Generate the access token
+	accessClaims := &CustomClaims{
 		UserID: userID,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
+			ExpiresAt: accessExpirationTime.Unix(),
 		},
 	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	Token, err := token.SignedString(jwtKey)
-	if err == nil {
-		Store.StoreToken(Token, expirationTime, string(userID))
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
+	access, err := accessToken.SignedString(jwtKey)
+	if err != nil {
+		return "", "", err
 	}
-	return token.SignedString(jwtKey)
-}
-func GenerateRefreshToken(userID uint64) (string, error) {
-	expirationTime := time.Now().Add(5 * time.Minute)
-	claims := &CustomClaims{
+
+	// Generate the refresh token
+	refreshClaims := &CustomClaims{
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
+			ExpiresAt: refreshExpirationTime.Unix(),
 		},
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	refreshtoken, err := token.SignedString(jwtKey)
-	if err == nil {
-		Store.StoreToken(refreshtoken, expirationTime, string(userID)+"R")
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
+	refresh, err := refreshToken.SignedString(jwtKey)
+	if err != nil {
+		return "", "", err
 	}
-	return token.SignedString(jwtKey)
+
+	// Store both tokens
+	Store.StoreToken(access, refresh, accessExpirationTime, userID)
+	fmt.Println(Store.Tokens[userID].Token)
+
+	return access, refresh, nil
 }
 
-func DecodeToken(TK string) (string, error) {
+func DecodeToken(TK string) (int, error) {
 	claims := &CustomClaims{}
 	_, err := jwt.ParseWithClaims(TK, claims, func(token *jwt.Token) (interface{}, error) {
 		// ...
@@ -60,10 +65,17 @@ func DecodeToken(TK string) (string, error) {
 }
 
 func AuthLogin(c *gin.Context) {
+
 	accessToken := c.GetHeader("Authorization")
+	if accessToken == "" {
+		c.JSON(400, gin.H{"token status": "Missing Token"})
+		c.AbortWithStatus(400)
+		return
+
+	}
 	// refreshToken := c.GetHeader("X-Refresh-Token")
-	for _, tokenString := range Store.tokens {
-		if accessToken == tokenString.token {
+	for _, tokenString := range Store.Tokens {
+		if accessToken == tokenString.Token {
 			token, err := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
 				// Provide the secret key used for token verification
 				return jwtKey, nil
@@ -74,8 +86,7 @@ func AuthLogin(c *gin.Context) {
 			}
 			if _, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 				// Access claims from the token
-
-				c.JSON(200, gin.H{"token status": "Validtoken"})
+				c.Next()
 				return
 				// ... access other claims
 			} else {
@@ -89,8 +100,8 @@ func AuthLogin(c *gin.Context) {
 func Refreshtoken(c *gin.Context) {
 	accessToken := c.GetHeader("Authorization")
 	refreshToken := c.GetHeader("X-Refresh-Token")
-	for userID, tokenString := range Store.tokens {
-		if accessToken == tokenString.token {
+	for userID, tokenString := range Store.Tokens {
+		if accessToken == tokenString.Token {
 			_, err := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
 				// Provide the secret key used for token verification
 				return jwtKey, nil
@@ -98,8 +109,8 @@ func Refreshtoken(c *gin.Context) {
 			ve, ok := err.(*jwt.ValidationError)
 			if ok && ve.Errors&jwt.ValidationErrorExpired != 0 {
 				// check if access invalid
-				if refreshToken == Store.tokens[userID+"R"].token {
-					token, err := jwt.Parse(Store.tokens[userID+"R"].token, func(token *jwt.Token) (interface{}, error) {
+				if refreshToken == Store.Tokens[userID].RefreshToken {
+					token, err := jwt.Parse(Store.Tokens[userID].RefreshToken, func(token *jwt.Token) (interface{}, error) {
 						// Provide the secret key used for token verification
 						return jwtKey, nil
 					})
@@ -122,5 +133,6 @@ func Refreshtoken(c *gin.Context) {
 			}
 		}
 	}
-	c.JSON(200, gin.H{"token status": "not exist"})
+	c.JSON(401, gin.H{"token status": "not exist"})
+	c.AbortWithStatus(401)
 }

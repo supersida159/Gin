@@ -7,33 +7,35 @@ import (
 
 type tokenStruct struct {
 	expirationdate time.Time
-	token          string
+	Token          string
+	RefreshToken   string
 }
 type TokenStore struct {
 	mu     sync.Mutex
-	tokens map[string]tokenStruct
+	Tokens map[int]tokenStruct
 }
 
 func NewTokenStore() *TokenStore {
 	return &TokenStore{
-		tokens: make(map[string]tokenStruct),
+		Tokens: make(map[int]tokenStruct),
 	}
 }
 
-func (ts *TokenStore) StoreToken(token string, expiration time.Time, UserID string) {
+func (ts *TokenStore) StoreToken(token, refreshtoken string, expiration time.Time, UserID int) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
-	ts.tokens[string(UserID)] = tokenStruct{
+	ts.Tokens[UserID] = tokenStruct{
 		expirationdate: expiration,
-		token:          token,
+		Token:          token,
+		RefreshToken:   refreshtoken,
 	}
 }
 
 func (ts *TokenStore) IsTokenValid(token string) bool {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
-	for _, tokenData := range ts.tokens {
-		if tokenData.token == token {
+	for _, tokenData := range ts.Tokens {
+		if tokenData.Token == token {
 			return tokenData.expirationdate.After(time.Now())
 		}
 	}
@@ -43,8 +45,8 @@ func (ts *TokenStore) GetAllTokens() map[string]time.Time {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	tokensCopy := make(map[string]time.Time)
-	for _, TokenData := range ts.tokens {
-		tokensCopy[TokenData.token] = TokenData.expirationdate
+	for _, TokenData := range ts.Tokens {
+		tokensCopy[TokenData.Token] = TokenData.expirationdate
 	}
 	return tokensCopy
 }

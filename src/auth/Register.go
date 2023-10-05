@@ -11,20 +11,21 @@ import (
 	// "gin-framework/src/db"
 )
 
-type UsersinforDB db.UsersinforDB
+var x, err = db.GetUserDB()
+
 type UserRegister struct{}
 
-func (au UserRegister) Register(c *gin.Context, data UsersinforDB) {
+func (au UserRegister) Register(c *gin.Context) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 	Phonenumber := c.PostForm("phonenumber")
 	if Phonenumber == "" {
 		//Add the phonenumber to empty(use the last phonenumber to make it)
-		NumPhone, _ := strconv.Atoi(data[len(data)-1].Phonenumber)
+		NumPhone, _ := strconv.Atoi(db.UsersinforDB[len(db.UsersinforDB)-1].Phonenumber)
 		NumPhone = NumPhone + 101
 		Phonenumber = "0" + strconv.Itoa(NumPhone)
 	}
-	for _, user := range data {
+	for _, user := range db.UsersinforDB {
 		if user.Username == username {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Username already taken"})
 			return
@@ -39,10 +40,10 @@ func (au UserRegister) Register(c *gin.Context, data UsersinforDB) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not hash password"})
 		return
 	}
-	if db.AddRow(username, string(hashedPassword), Phonenumber) == nil {
+	if db.AddRowUser(username, string(hashedPassword), Phonenumber) == nil {
 		c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
-		db.UpdateDB()
+		db.UpdateUserDB()
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "User registered fail", "error": db.AddRow(username, string(hashedPassword), Phonenumber)})
+	c.JSON(http.StatusOK, gin.H{"message": "User registered fail", "error": db.AddRowUser(username, string(hashedPassword), Phonenumber)})
 }

@@ -1,17 +1,17 @@
 package main
 
 import (
-	// "fmt"
+	"fmt"
 	"net/http"
 
-	// "gin-framework/src/Message"
+	"gin-framework/src/Message"
 	"gin-framework/src/auth"
-	"gin-framework/src/db"
 
-	// "gin-framework/src/friend"
+	"gin-framework/src/db"
+	"gin-framework/src/friend"
 
 	"github.com/gin-gonic/gin"
-	// "github.com/gorilla/websocket"
+	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -26,30 +26,30 @@ func setupRouter() *gin.Engine {
 	r := gin.Default()
 
 	// Enable CORS for all origins
-	// r.Use(corsMiddleware())
-	// r.GET("/ws", wshandler)
-	// r.GET("/one", getting)
-	// r.GET("/two/:name", getName)
-	// r.POST("/login", postLogin)
-	// r.GET("/admin", Printoken)
-	// r.POST("/Register", func(c *gin.Context) {
-	// 	userRegister := auth.UserRegister{}
-	// 	userRegister.Register(c)
-	// })
-	// PrivateInfo := r.Group("/Private")
-	// PrivateInfo.Use(auth.AuthLogin)
-	// {
-	// 	PrivateInfo.GET("/Friend", friend.NewFriendService().GetFriendshipDB)
-	// 	PrivateInfo.GET("/History", Message.NewMess().GetMess)
-	// 	PrivateInfo.POST("/HistoryFirst", Message.NewMess().GetMessFirst)
-	// 	PrivateInfo.GET("/SendMess", Message.NewMess().SendMess)
-	// }
-	// //friend...
-	// //seaching friend
-	// r.POST("/SeachFriend", auth.AuthLogin, friend.NewFriendService().Search)
-	// r.POST("/UpdateFriend", auth.AuthLogin, friend.NewFriendService().ReceiveUpdateRelate)
-	// // verify refreshtoken
-	// r.GET("/Refresh", auth.Refreshtoken)
+	r.Use(corsMiddleware())
+	r.GET("/", wshandler)
+	r.GET("/one", getting)
+	r.GET("/two/:name", getName)
+	r.POST("/login", postLogin)
+	r.GET("/admin", Printoken)
+	r.POST("/Register", func(c *gin.Context) {
+		userRegister := auth.UserRegister{}
+		userRegister.Register(c)
+	})
+	PrivateInfo := r.Group("/Private")
+	PrivateInfo.Use(auth.AuthLogin)
+	{
+		PrivateInfo.GET("/Friend", friend.NewFriendService().GetFriendshipDB)
+		PrivateInfo.GET("/History", Message.NewMess().GetMess)
+		PrivateInfo.POST("/HistoryFirst", Message.NewMess().GetMessFirst)
+		PrivateInfo.GET("/SendMess", Message.NewMess().SendMess)
+	}
+	//friend...
+	//seaching friend
+	r.POST("/SeachFriend", auth.AuthLogin, friend.NewFriendService().Search)
+	r.POST("/UpdateFriend", auth.AuthLogin, friend.NewFriendService().ReceiveUpdateRelate)
+	// verify refreshtoken
+	r.GET("/Refresh", auth.Refreshtoken)
 	return r
 }
 
@@ -106,25 +106,25 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
-// var wsupgrader = websocket.Upgrader{
-// 	ReadBufferSize:  1024,
-// 	WriteBufferSize: 1024,
-// }
+var wsupgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
 
-// func wshandler(ginContext *gin.Context) {
-// 	conn, err := wsupgrader.Upgrade(ginContext.Writer, ginContext.Request, nil)
-// 	if err != nil {
-// 		fmt.Println("Failed to set websocket upgrade: ", err)
-// 		return
-// 	}
+func wshandler(ginContext *gin.Context) {
+	conn, err := wsupgrader.Upgrade(ginContext.Writer, ginContext.Request, nil)
+	if err != nil {
+		fmt.Println("Failed to set websocket upgrade: ", err)
+		return
+	}
 
-// 	for {
-// 		t, msg, err := conn.ReadMessage()
-// 		fmt.Println("recv:", t)
-// 		fmt.Println("msg:", msg)
-// 		if err != nil {
-// 			break
-// 		}
-// 		conn.WriteMessage(t, msg)
-// 	}
-// }
+	for {
+		t, msg, err := conn.ReadMessage()
+		fmt.Println("recv:", t)
+		fmt.Println("msg:", msg)
+		if err != nil {
+			break
+		}
+		conn.WriteMessage(t, msg)
+	}
+}

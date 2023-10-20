@@ -30,6 +30,7 @@ require (
 	github.com/go-playground/validator/v10 v10.15.2 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gohugoio/hugo v0.117.0 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/howeyc/fsnotify v0.9.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

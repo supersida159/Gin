@@ -36,10 +36,10 @@ func UpdateFriendshipDB() {
 	FriendshipDB, ErrF = GetFriendshipDB()
 }
 
-var UsersinforDB, Err = GetUserDB()
+var UsersinforDB, Err, IDtoName = GetUserDB()
 
 func UpdateUserDB() {
-	UsersinforDB, Err = GetUserDB()
+	UsersinforDB, Err, IDtoName = GetUserDB()
 }
 
 var ChattingHisDB, ErrC = GetMessage()
@@ -62,39 +62,40 @@ func ConnectSQL() (*sql.DB, error) {
 	return db, nil
 }
 
-func GetUserDB() ([]userInfor, error) {
+func GetUserDB() ([]userInfor, error, map[int]string) {
 	db, err := ConnectSQL()
 	if err != nil {
 		fmt.Println("connect error")
-		return nil, err
+		return nil, err, nil
 	}
 	defer db.Close()
 
 	rows, err := db.Query("SELECT * FROM userinfor")
 	if err != nil {
 		fmt.Println("select table error")
-		return nil, err
+		return nil, err, nil
 	}
 	defer rows.Close()
 
 	var UsersinforDB []userInfor
+	IDtoName := make(map[int]string)
 
 	for rows.Next() {
 		var userDB userInfor
 		err := rows.Scan(&userDB.ID, &userDB.Username, &userDB.Phonenumber, &userDB.Password)
 		if err != nil {
 			fmt.Println("get row error")
-			return nil, err
+			return nil, err, nil
 		}
-
+		IDtoName[userDB.ID] = userDB.Username
 		UsersinforDB = append(UsersinforDB, userDB)
 	}
 	if err := rows.Err(); err != nil {
 
-		return nil, err
+		return nil, err, nil
 
 	}
-	return UsersinforDB, nil
+	return UsersinforDB, nil, IDtoName
 }
 
 // get Friendship
@@ -170,6 +171,8 @@ func SendmessageDB(Sender, Receiver int, Content string, ChattingID int) error {
 	return err
 
 }
+
+// get mess with sender and receiver
 func GetMessage() ([]ChattingHis, error) {
 	db, err := ConnectSQL()
 	if err != nil {
@@ -206,6 +209,9 @@ func GetMessage() ([]ChattingHis, error) {
 	return ChattingHisDB, nil
 
 }
+
+//get user history to show in side scroll
+
 func UpdateFriendship(Status string, Sender, FriendshipID int) error {
 	db, err := ConnectSQL()
 	if err != nil {

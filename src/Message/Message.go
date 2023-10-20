@@ -5,6 +5,7 @@ import (
 	"gin-framework/src/auth"
 	"gin-framework/src/db"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -51,4 +52,83 @@ func (m *Mess) GetMess(c *gin.Context) {
 
 	}
 	c.JSON(http.StatusOK, Result)
+}
+
+func (m *Mess) GetMessFirst(c *gin.Context) {
+	type RequestData struct {
+		NumberScroll int `json:"Number"`
+	}
+	var requestData RequestData
+	type ChattingHisWUser struct {
+		ChattingID int
+		Sender     int
+		Receiver   int
+		Content    string
+		Sendtime   time.Time
+		UserName   string
+	}
+
+	var Result []ChattingHisWUser
+	var UniqueHis []int
+
+	fmt.Println(c.GetHeader("Authorization"))
+
+	Sender, _ := auth.DecodeToken(c.GetHeader("Authorization"))
+	if err := c.ShouldBindJSON(&requestData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Status": err})
+		return
+	}
+	fmt.Println(requestData.NumberScroll)
+	for _, Messx := range db.ChattingHisDB {
+		if Sender == Messx.Sender {
+			uExists := false
+			for _, Histlist := range UniqueHis {
+				if Messx.Receiver == Histlist {
+					uExists = true
+					break
+				}
+
+			}
+			if !uExists {
+				UniqueHis = append(UniqueHis, Messx.Receiver)
+				if len(Result) < requestData.NumberScroll*10 {
+					chattingHisWUser := ChattingHisWUser{
+						ChattingID: Messx.ChattingID,
+						Sender:     Messx.Sender,
+						Receiver:   Messx.Receiver,
+						Content:    Messx.Content,
+						Sendtime:   Messx.Sendtime,            // Copy the ChattingHis data
+						UserName:   db.IDtoName[Messx.Sender], // Replace with the actual username
+					}
+					Result = append(Result, chattingHisWUser)
+				}
+			}
+		} else if Sender == Messx.Receiver {
+			uExists := false
+			for _, Histlist := range UniqueHis {
+				if Messx.Sender == Histlist {
+					uExists = true
+					break
+				}
+			}
+			if !uExists {
+				UniqueHis = append(UniqueHis, Messx.Sender)
+
+				if len(Result) < requestData.NumberScroll*10 {
+					chattingHisWUser := ChattingHisWUser{
+						ChattingID: Messx.ChattingID,
+						Sender:     Messx.Sender,
+						Receiver:   Messx.Receiver,
+						Content:    Messx.Content,
+						Sendtime:   Messx.Sendtime,              // Copy the ChattingHis data
+						UserName:   db.IDtoName[Messx.Receiver], // This is last user send message
+					}
+					Result = append(Result, chattingHisWUser)
+				}
+			}
+		}
+
+	}
+	c.JSON(http.StatusOK, Result)
+
 }

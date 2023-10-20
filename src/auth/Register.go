@@ -11,7 +11,7 @@ import (
 	// "gin-framework/src/db"
 )
 
-var x, err = db.GetUserDB()
+var x, err, _ = db.GetUserDB()
 
 type UserRegister struct{}
 

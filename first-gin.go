@@ -9,13 +9,14 @@ import (
 
 	"gin-framework/src/db"
 	"gin-framework/src/friend"
+	"gin-framework/src/websocket"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
+
 	r := setupRouter()
 
 	// Listen and Serve on 0.0.0.0:8080
@@ -24,10 +25,10 @@ func main() {
 
 func setupRouter() *gin.Engine {
 	r := gin.Default()
-
+	setupRoutesWS(r)
 	// Enable CORS for all origins
 	r.Use(corsMiddleware())
-	r.GET("/", wshandler)
+	// r.GET("/echo", handleWebSocket)
 	r.GET("/one", getting)
 	r.GET("/two/:name", getName)
 	r.POST("/login", postLogin)
@@ -106,25 +107,27 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
-var wsupgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
-func wshandler(ginContext *gin.Context) {
-	conn, err := wsupgrader.Upgrade(ginContext.Writer, ginContext.Request, nil)
+func serveWs(pool *websocket.Pool, c *gin.Context) {
+	fmt.Println("WebSocket Endpoint Hit")
+	conn, err := websocket.Upgrade(c)
 	if err != nil {
-		fmt.Println("Failed to set websocket upgrade: ", err)
+		fmt.Fprintf(c.Writer, "%+v\n", err)
 		return
 	}
 
-	for {
-		t, msg, err := conn.ReadMessage()
-		fmt.Println("recv:", t)
-		fmt.Println("msg:", msg)
-		if err != nil {
-			break
-		}
-		conn.WriteMessage(t, msg)
+	client := &websocket.Client{
+		Conn: conn,
+		Pool: pool,
 	}
+
+	pool.Register <- client
+	client.Read()
+}
+func setupRoutesWS(router *gin.Engine) {
+	pool := websocket.NewPool()
+	go pool.Start()
+
+	router.GET("/ws", func(c *gin.Context) {
+		serveWs(pool, c)
+	})
 }

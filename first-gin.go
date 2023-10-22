@@ -125,6 +125,7 @@ func serveWs(pool *websocket.Pool, c *gin.Context) {
 }
 func setupRoutesWS(router *gin.Engine) {
 	pool := websocket.NewPool()
+	fmt.Println("Pool:", pool)
 	go pool.Start()
 
 	router.GET("/ws", func(c *gin.Context) {
